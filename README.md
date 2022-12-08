@@ -9,7 +9,7 @@ The articles are written as Jupyter notebooks, as this enables executable code e
    Python can be downloaded here: https://www.python.org/downloads/
 1. Install Pipenv on your system by running `pip install pipenv` from the command line.
 1. Clone this repository to your local machine.
-1. Run pipenv install to install the required packages for your project.
+1. Run `pipenv install` from the command line to install the required packages for your project.
 1. Start a Jupyter notebook server by running `pipenv run jupyter notebook` from the command line.
 1. Navigate to *article-01/article.ipynb* in the browser window that is opened. 
 
