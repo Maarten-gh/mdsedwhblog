@@ -10,6 +10,7 @@ scikit-learn = "*"
 jinja2 = "*"
 jupyter-pip = "*"
 ipykernel = "*"
+nbformat = "*"
 
 [dev-packages]
 ipykernel = "*"
