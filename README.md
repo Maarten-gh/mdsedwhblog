@@ -10,10 +10,11 @@ The articles are written as Jupyter notebooks, as this enables executable code e
 1. Install Pipenv on your system by running `pip install pipenv` from the command line.
 1. Clone this repository to your local machine.
 1. Run `pipenv install` from the command line to install the required packages for your project.
-1. Start a Jupyter notebook server by running `pipenv run jupyter notebook` from the command line.
-1. Navigate to *article-01/article.ipynb* in the browser window that is opened. 
+1. Start run the code for article using the command `pipenv run python -m article-01\article1.py`.
 
 ## Articles
+
+Note: syntax highlighting in the articles is done using https://syntax-highlighter.k26.ch/.
 
 1. **Model Driven Software Engineering for Data Warehousing — Part 1: Code Generation** (article-01)
 
