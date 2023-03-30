@@ -1,5 +1,5 @@
-from src.physical_domain import PhysicalModel, Schema, Table, Column, ForeignKeyConstraint, PrimaryKeyConstraint
-from src.logical_domain import LogicalModel, Domain, Entity, Property, Relation
+from domain.physical_domain import PhysicalModel, Schema, Table, Column, ForeignKeyConstraint, PrimaryKeyConstraint
+from domain.logical_domain import LogicalModel, Domain, Entity, Property, Relation
 
 orders_domain_model = LogicalModel(
     domains=[

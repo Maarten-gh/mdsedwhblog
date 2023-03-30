@@ -3,14 +3,14 @@
 THis repository contains the articles my Model Driven Software Engineering for Data Warehousing blog.
 The articles are written as Jupyter notebooks, as this enables executable code examples to liven up the text of the articles.
 
-## Running Jupyter Notebooks
+## Running Code Examples
 
 1. Make sure Python 3.10 is installed on your local machine.
    Python can be downloaded here: https://www.python.org/downloads/
 1. Install Pipenv on your system by running `pip install pipenv` from the command line.
 1. Clone this repository to your local machine.
 1. Run `pipenv install` from the command line to install the required packages for your project.
-1. Start run the code for article using the command `pipenv run python -m article-01\article1.py`.
+1. Start run the code for article using the command `pipenv run python 'src/article-01.py'`.
 
 ## Articles
 
