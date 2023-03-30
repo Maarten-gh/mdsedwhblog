@@ -11,6 +11,18 @@ class Column:
 
     @property
     def fulltype(self) -> str:
+        """Returns a full type definition for this column.
+        The type definition contains the datatype, length and scale if they are
+        provided. Also `NULL` or `NOT NULL` is appended based on the 
+        nullability of this column.
+
+        For example, `int NULL`, `nvarchar(255) NOT NULL` or `numeric(10,3) NULL`.
+        
+        Returns
+        -------
+        str
+            The full type specification for this column.
+        """
         fulltype = ""
 
         if (self.length != None and self.scale != None):

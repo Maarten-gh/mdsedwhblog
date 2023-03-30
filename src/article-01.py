@@ -141,28 +141,39 @@ orders_database_model = logical_model_to_physical_model(orders_domain_model)
 
 
 dml_template_text = """
+{# Define funcionality to quote and join lists of names #}
+{% macro q(names) -%}
+[{{ names|join('].[') }}]
+{%- endmacro %}
+{# Loop trough all schemas and create SQL DML statements -#}
 {% for schema in schemas %}
+CREATE SCHEMA {{ q([schema.name]) }};
 GO
-CREATE SCHEMA [{{ schema.name }}];
-GO
- 
+
+{# Loop trough all tables in the schema and create a CREATE TABLE statement -#}
 {% for table in schema.tables %}
-CREATE TABLE [{{ schema.name }}].[{{ table.name }}] (
+CREATE TABLE {{ q([schema.name, table.name]) }} (
 {% for column in table.columns -%}
-{{ '  ' if loop.index == 1 else ', ' }}[{{ column.name }}] {{ column.fulltype }}
+{# Output a comma (,) except for the first column of the table -#}
+{{ '  ' if loop.index == 1 else ', ' }}{{ q([column.name]) }} {{ column.fulltype }}
 {% endfor -%}
-, CONSTRAINT [{{ table.primary_key_constraint.name }}] PRIMARY KEY ([{{ table.primary_key_constraint.column_names|join('], [') }}])
+, CONSTRAINT {{ q([table.primary_key_constraint.name]) }}
+    PRIMARY KEY ({{ q(table.primary_key_constraint.column_names) }})
 );
 GO
 {% endfor -%}
  
+{# Loop tables in the schema and create foreign keys constraints -#}
 {% for table in schema.tables|selectattr('foreign_key_constraints') %}
-ALTER TABLE [{{ schema.name }}].[{{ table.name }}]
+ALTER TABLE {{ q([schema.name, table.name]) }}
 ADD
 {% for foreign_key in table.foreign_key_constraints -%}
-{{ '  ' if loop.index == 1 else ', ' }}CONSTRAINT [{{ foreign_key.name }}] 
-    FOREIGN KEY ([{{ foreign_key.column_names|join('], [') }}]) 
-    REFERENCES [{{ foreign_key.foreign_schema_name }}].[{{ foreign_key.foreign_table_name }}] ([{{ foreign_key.foreign_column_names|join('], [') }}])
+{# Output a comma (,) except for the first foreign key constraint of the table -#}
+{{ '  ' if loop.index == 1 else ', ' }}CONSTRAINT {{ q([foreign_key.name]) }}
+    FOREIGN KEY 
+      ({{ q(foreign_key.column_names) }})
+    REFERENCES {{ q([foreign_key.foreign_schema_name, foreign_key.foreign_table_name]) }} 
+      ({{ q(foreign_key.foreign_column_names) }})
 {% endfor -%}
 ;
 GO
