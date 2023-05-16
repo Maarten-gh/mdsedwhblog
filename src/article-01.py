@@ -145,17 +145,23 @@ dml_template_text = """
 {% macro q(names) -%}
 [{{ names|join('].[') }}]
 {%- endmacro %}
+
+{# Define a macro to put commas ',' before items in a loop,
+   except before the first item #}
+{% macro c(loop) -%}
+{{ '  ' if loop.index == 0 else ', ' }}
+{%- endmacro %}
+
 {# Loop trough all schemas and create SQL DML statements -#}
 {% for schema in schemas %}
 CREATE SCHEMA {{ q([schema.name]) }};
 GO
 
-{# Loop trough all tables in the schema and create a CREATE TABLE statement -#}
+{# Loop trough all tables in the schema and output a CREATE TABLE statement -#}
 {% for table in schema.tables %}
 CREATE TABLE {{ q([schema.name, table.name]) }} (
 {% for column in table.columns -%}
-{# Output a comma (,) except for the first column of the table -#}
-{{ '  ' if loop.index == 1 else ', ' }}{{ q([column.name]) }} {{ column.fulltype }}
+{{ c(loop) }}{{ q([column.name]) }} {{ column.fulltype }}
 {% endfor -%}
 , CONSTRAINT {{ q([table.primary_key_constraint.name]) }}
     PRIMARY KEY ({{ q(table.primary_key_constraint.column_names) }})
@@ -163,17 +169,16 @@ CREATE TABLE {{ q([schema.name, table.name]) }} (
 GO
 {% endfor -%}
  
-{# Loop tables in the schema and create foreign keys constraints -#}
+{# Loop trough tables with foreign keys and output FOREIGN KEY constraints -#}
 {% for table in schema.tables|selectattr('foreign_key_constraints') %}
 ALTER TABLE {{ q([schema.name, table.name]) }}
 ADD
-{% for foreign_key in table.foreign_key_constraints -%}
-{# Output a comma (,) except for the first foreign key constraint of the table -#}
-{{ '  ' if loop.index == 1 else ', ' }}CONSTRAINT {{ q([foreign_key.name]) }}
+{% for fkey in table.foreign_key_constraints -%}
+{{ c(loop) }}CONSTRAINT {{ q([fkey.name]) }}
     FOREIGN KEY 
-      ({{ q(foreign_key.column_names) }})
-    REFERENCES {{ q([foreign_key.foreign_schema_name, foreign_key.foreign_table_name]) }} 
-      ({{ q(foreign_key.foreign_column_names) }})
+      ({{ q(fkey.column_names) }})
+    REFERENCES {{ q([fkey.foreign_schema_name, fkey.foreign_table_name]) }} 
+      ({{ q(fkey.foreign_column_names) }})
 {% endfor -%}
 ;
 GO
