@@ -1,0 +1,51 @@
+{# Define funcionality to quote and join lists of names #}
+{% macro q(names) -%}
+[{{ names|join('].[') }}]
+{%- endmacro %}
+
+{# Define a macro to put commas ',' before items in a loop,
+   except before the first item #}
+{% macro c(loop) -%}
+{{ '  ' if loop.index0 == 0 else ', ' }}
+{%- endmacro %}
+
+{# Loop trough all schema mappings and create SQL ETL statements -#}
+{% for schema_mapping in schema_mappings %}
+
+{# Loop trough all table mappings and create SQL ETL statements -#}
+{% for table_mapping in schema_mapping.table_mappings %}
+-- Load table {{ schema_mapping.target_schema.name }}.{{ table_mapping.target_table.name }}
+CREATE OR ALTER PROCEDURE {{ q([schema_mapping.target_schema.name, "usp_load_" + table_mapping.target_table.name]) }} (
+  @hda_runId uniqueidentifier
+, @stg_runId uniqueidentifier
+)
+AS
+BEGIN
+  -- Load HDA table with data from specific staging load.
+  INSERT INTO {{ q([schema_mapping.target_schema.name, table_mapping.target_table.name]) }} (
+  {% for column in table_mapping.target_table.columns -%}
+  {{ c(loop) }}{{ q([column.name]) }}
+  {% endfor -%}
+  )
+  SELECT
+    @hda_runId
+  {% for column_mapping in table_mapping.column_mappings -%}
+  , {{ q([column_mapping.source_column.name]) }}
+  {% endfor -%}
+  FROM 
+    {{ q([schema_mapping.source_schema.name, table_mapping.source_table.name]) }}
+  WHERE
+    {{ q(["stg_runId"]) }} = @stg_runId
+  ;
+  -- Cleanup staging table after HDA load succeeded.
+  DELETE FROM
+    {{ q([schema_mapping.source_schema.name, table_mapping.source_table.name]) }}
+  WHERE
+    {{ q(["stg_runId"]) }} = @stg_runId
+  ;
+END
+;
+GO
+{% endfor %}
+
+{% endfor %}

@@ -149,7 +149,7 @@ dml_template_text = """
 {# Define a macro to put commas ',' before items in a loop,
    except before the first item #}
 {% macro c(loop) -%}
-{{ '  ' if loop.index == 0 else ', ' }}
+{{ '  ' if loop.index0 == 0 else ', ' }}
 {%- endmacro %}
 
 {# Loop trough all schemas and create SQL DML statements -#}
@@ -164,8 +164,13 @@ CREATE TABLE {{ q([schema.name, table.name]) }} (
 {{ c(loop) }}{{ q([column.name]) }} {{ column.fulltype }}
 {% endfor -%}
 , CONSTRAINT {{ q([table.primary_key_constraint.name]) }}
-    PRIMARY KEY ({{ q(table.primary_key_constraint.column_names) }})
-);
+    PRIMARY KEY (
+    {% for column_name in table.primary_key_constraint.column_names -%}
+    {{ c(loop) }}{{ q([column_name]) }}
+    {% endfor -%}
+    )
+)
+;
 GO
 {% endfor -%}
  
