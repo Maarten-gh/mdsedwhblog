@@ -1,0 +1,41 @@
+::: mermaid
+graph LR
+
+{%- for schema_mapping in schema_mappings %}
+subgraph {{schema_mapping.source_schema.name}} [{{schema_mapping.source_schema.name}}]
+
+{% for table_mapping in schema_mapping.table_mappings -%}
+subgraph {{schema_mapping.source_schema.name}}.{{table_mapping.source_table.name}} [{{table_mapping.source_table.name}}]
+
+  {% for column_mapping in table_mapping.column_mappings -%}
+  {% if column_mapping.source_column -%} {{schema_mapping.source_schema.name}}.{{table_mapping.source_table.name}}.{{column_mapping.source_column.name}}({{column_mapping.source_column.name}}) {%- endif %}
+  {% endfor %}
+
+end
+{% endfor -%}
+
+end
+
+subgraph  {{schema_mapping.target_schema.name}} [{{schema_mapping.target_schema.name}}]
+
+{% for table_mapping in schema_mapping.table_mappings -%}
+subgraph {{schema_mapping.target_schema.name}}.{{table_mapping.target_table.name}} [{{table_mapping.target_table.name}}]
+
+  {% for column_mapping in table_mapping.column_mappings -%}
+  {{schema_mapping.target_schema.name}}.{{table_mapping.target_table.name}}.{{column_mapping.target_column.name}}({{column_mapping.target_column.name}})
+  {% endfor %}
+
+end
+{% endfor -%}
+
+end
+
+{% for table_mapping in schema_mapping.table_mappings -%}
+{% for column_mapping in table_mapping.column_mappings -%}
+{% if column_mapping.source_column -%} {{schema_mapping.target_schema.name}}.{{table_mapping.target_table.name}}.{{column_mapping.target_column.name}}-->{{schema_mapping.source_schema.name}}.{{table_mapping.source_table.name}}.{{column_mapping.source_column.name}}({{column_mapping.source_column.name}}) {%- endif %}
+{% endfor %}
+{% endfor -%}
+
+{%- endfor -%}
+
+:::

@@ -9,6 +9,11 @@
 {{ '  ' if loop.index0 == 0 else ', ' }}
 {%- endmacro %}
 
+{# Define a macro that returns the value for a column from a column mapping #}
+{% macro colval(mapping) -%}
+{{ q([mapping.source_column.name]) if mapping.source_column else mapping.expression  }}
+{%- endmacro %}
+
 {# Loop trough all schema mappings and create SQL ETL statements -#}
 {% for schema_mapping in schema_mappings %}
 
@@ -23,14 +28,13 @@ AS
 BEGIN
   -- Load HDA table with data from specific staging load.
   INSERT INTO {{ q([schema_mapping.target_schema.name, table_mapping.target_table.name]) }} (
-  {% for column in table_mapping.target_table.columns -%}
-  {{ c(loop) }}{{ q([column.name]) }}
+  {% for column_mapping in table_mapping.column_mappings -%}
+  {{ c(loop) }}{{ q([column_mapping.target_column.name]) }}
   {% endfor -%}
   )
   SELECT
-    @hda_runId
   {% for column_mapping in table_mapping.column_mappings -%}
-  , {{ q([column_mapping.source_column.name]) }}
+  {{ c(loop) }}{{ colval(column_mapping) }}
   {% endfor -%}
   FROM 
     {{ q([schema_mapping.source_schema.name, table_mapping.source_table.name]) }}
