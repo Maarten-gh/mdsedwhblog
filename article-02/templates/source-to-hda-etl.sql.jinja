@@ -1,0 +1,77 @@
+{% from 'hda_etl_util.sql.jinja' import 
+  hda_column_name_list,
+  hda_column_value_list,
+  compare_source_column_to_target_column,
+  null_safe_compare_source_column_to_target_column,
+  get_usp_load_name,
+  get_ufn_pit_name,
+  get_hda_table_name,
+  get_source_table_name
+  with context 
+%}
+
+{# Loop trough all schema mappings and create SQL ETL statements -#}
+{% for schema_mapping in schema_mappings %}
+
+{# Loop trough all table mappings and create SQL ETL statements -#}
+{% for table_mapping in schema_mapping.table_mappings %}
+-- Load table {{ get_hda_table_name(schema_mapping, table_mapping) }}
+CREATE OR ALTER PROCEDURE {{ get_usp_load_name(schema_mapping, table_mapping) }} (
+  @timestamp_utc datetime2
+)
+AS
+BEGIN
+  -- {{ table_mapping.load_strategies[0].steps[0].description }}.
+  INSERT INTO {{ get_hda_table_name(schema_mapping, table_mapping) }} (
+  {{ hda_column_name_list(table_mapping.load_strategies[0].steps[0]) -}}
+  )
+  SELECT
+  {{ hda_column_value_list(table_mapping.load_strategies[0].steps[0]) -}}
+  FROM 
+    {{ get_source_table_name(schema_mapping, table_mapping) }} AS [src]
+  WHERE NOT EXISTS (
+    SELECT 
+      1
+    FROM
+      {{ get_ufn_pit_name(schema_mapping, table_mapping) }}(@timestamp_utc) AS [hda]
+    WHERE
+      1=1
+    {% for column_name in table_mapping.source_table.primary_key_constraint.column_names -%}
+    AND
+      {{ compare_source_column_to_target_column(column_name, table_mapping.load_strategies[0].steps[0]) }}      
+    {% endfor -%}
+    {% for column in table_mapping.source_table.columns 
+           if column.name not in table_mapping.source_table.primary_key_constraint.column_names -%}
+    AND 
+      {{ null_safe_compare_source_column_to_target_column(column.name, table_mapping.load_strategies[0].steps[0]) }} 
+    {% endfor %}
+  )
+  ;
+
+  -- {{ table_mapping.load_strategies[0].steps[1].description }}.
+  INSERT INTO {{ get_hda_table_name(schema_mapping, table_mapping) }} (
+  {{ hda_column_name_list(table_mapping.load_strategies[0].steps[1]) -}}
+  )
+  SELECT
+  {{ hda_column_value_list(table_mapping.load_strategies[0].steps[1]) -}}
+  FROM 
+    {{ get_ufn_pit_name(schema_mapping, table_mapping) }}(@timestamp_utc) AS [hda]
+  WHERE NOT EXISTS (
+    SELECT 
+      1
+    FROM
+      {{ get_source_table_name(schema_mapping, table_mapping) }} AS [src]
+    WHERE
+      1=1
+    {% for column_name in table_mapping.source_table.primary_key_constraint.column_names -%}
+    AND
+      {{ compare_source_column_to_target_column(column_name, table_mapping.load_strategies[0].steps[1]) -}}      
+    {% endfor %}
+  )
+  ;
+END
+;
+GO
+{% endfor %}
+
+{% endfor %}

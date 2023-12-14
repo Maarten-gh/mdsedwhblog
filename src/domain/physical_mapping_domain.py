@@ -5,8 +5,21 @@ from .physical_domain import PhysicalModel, Schema, Table, Column
 
 @dataclass
 class ColumnMapping:
-    source_column: Column
     target_column: Column
+    source_column: Column | None
+    expression: str | None = None
+    
+
+@dataclass
+class TableLoadStrategyStep:
+    description: str
+    column_mappings: list[ColumnMapping] = field(default_factory=list)
+
+
+@dataclass
+class TableLoadStrategy:
+    name: str
+    steps: list[TableLoadStrategyStep] = field(default_factory=list)
 
 
 @dataclass
@@ -14,7 +27,7 @@ class TableMapping:
     source_table: Table
     target_table: Table
 
-    column_mappings: list[ColumnMapping] = field(default_factory=list)
+    load_strategies: list[TableLoadStrategy] = field(default_factory=list)
 
 
 @dataclass

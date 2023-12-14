@@ -1,0 +1,40 @@
+{% from 'util.sql.jinja' import q, c with context %}
+
+{# Loop trough all schemas and create SQL DML statements -#}
+{% for schema in schemas %}
+CREATE SCHEMA {{ q([schema.name]) }};
+GO
+
+{# Loop trough all tables in the schema and output a CREATE TABLE statement -#}
+{% for table in schema.tables %}
+CREATE TABLE {{ q([schema.name, table.name]) }} (
+{% for column in table.columns -%}
+{{ c(loop) }}{{ q([column.name]) }} {{ column.fulltype }}
+{% endfor -%}
+, CONSTRAINT {{ q([table.primary_key_constraint.name]) }}
+    PRIMARY KEY (
+    {% for column_name in table.primary_key_constraint.column_names -%}
+    {{ c(loop) }}{{ q([column_name]) }}
+    {% endfor -%}
+    )
+)
+;
+GO
+{% endfor -%}
+ 
+{# Loop trough tables with foreign keys and output FOREIGN KEY constraints -#}
+{% for table in schema.tables|selectattr('foreign_key_constraints') %}
+ALTER TABLE {{ q([schema.name, table.name]) }}
+ADD
+{% for fkey in table.foreign_key_constraints -%}
+{{ c(loop) }}CONSTRAINT {{ q([fkey.name]) }}
+    FOREIGN KEY 
+      ({{ q(fkey.column_names) }})
+    REFERENCES {{ q([fkey.foreign_schema_name, fkey.foreign_table_name]) }} 
+      ({{ q(fkey.foreign_column_names) }})
+{% endfor -%}
+;
+GO
+{% endfor %}
+ 
+{% endfor %}

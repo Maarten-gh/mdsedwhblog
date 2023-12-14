@@ -1,0 +1,10 @@
+{# Quote and join lists of strings #}
+{% macro q(names) -%}
+[{{ names|join('].[') }}]
+{%- endmacro %}
+
+
+{# Put commas ',' before items in a loop, except before the first item #}
+{% macro c(loop) -%}
+{{ '  ' if loop.index0 == 0 else ', ' }}
+{%- endmacro %}

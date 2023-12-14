@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style type="text/css">
+            * {
+                box-sizing: border-box;
+            }
+
+            html, 
+            body {
+                height: 100vh;
+                margin: 0;
+                padding: 0;
+                width: 100vw;
+            }
+
+            #container {
+                background-color: aliceblue;
+                display: grid;
+                grid-template-rows: 1fr auto 1fr;
+                height: 100%;
+                padding: .5rem;
+                width: 100%;
+            }
+
+            #input {
+                resize: none;
+            }
+
+            #output {
+                display: grid;
+                font-family: "Consolas", "Bitstream Vera Sans Mono", "Courier New", Courier, monospace;
+                font-size: 12px;
+                grid-template-columns: 1fr;
+                overflow: auto;
+                white-space: pre;
+            }
+            
+            #output ol {
+                margin: 0;
+                padding: 0;
+                padding-inline-start: 40px;
+            }
+
+            #output li {
+                border-left: 3px solid #6ce26c;
+                font-size: .9rem;
+            }
+
+            #output li::marker {
+                unicode-bidi: isolate;
+                font-variant-numeric: tabular-nums;
+                text-transform: none;
+                text-indent: 0px !important;
+                text-align: start !important;
+                text-align-last: start !important;
+            }
+
+            #output li:nth-child(2n+1) {
+                background-color: white;
+            }
+            
+            #output li:nth-child(2n) {
+                background-color: #f8f8f8;
+            }
+
+            .button {
+                background-color: lightgray;
+                color: black;
+                border-style: outset;
+                cursor: pointer;
+                display: inline-block;
+                margin: .5rem;
+                padding: .5rem;
+                text-align: center;
+                user-select: none;
+            }
+
+            .button:active {
+                background-color: darkgrey;
+                border-style: inset;
+                cursor: pointer;
+                text-align: center;
+            }
+
+            [data-mixedmode=true] [data-mode=tsql] {
+                /* background-color: #6ce26c; */
+                background-color: lightgreen;
+                border-bottom: 1px solid darkgreen;
+                border-top: 1px solid darkgreen;
+            }
+
+            [data-mode=jinja],
+            [data-mode=jinja_comments] {
+                background-color: transparent;
+            }
+
+            [data-tokentype="bracket"] {
+                color: lightcoral;
+            }
+
+            [data-tokentype="comment"] {
+                color: #008200;
+            }
+
+            [data-mode="jinja_comments"][data-tokentype="comment"] {
+                background-color: rgb(228, 228, 228);
+                color: gray;
+            }
+
+            [data-tokentype="keyword"] {
+                font-weight: bold;
+                color: #006699;
+            }
+
+            [data-tokentype="layout"] {
+                color: #008200;
+            }
+
+            [data-tokentype="operator"] {
+                color: gray;
+            }
+
+            [data-tokentype="string"] {
+                color: blue;
+            }
+
+            [data-tokentype="switch"] {
+                background-color: rgb(228, 228, 228);
+                /* color: rgb(252, 126, 126); */
+                color: gray;
+            }
+        </style>
+
+        <script type="module">
+            const SELECT_HOST_ID = "select-host";
+
+            const TOKEN_TYPE_BRACKET = "bracket";
+            const TOKEN_TYPE_IDENTIFIER = "identifier";
+            const TOKEN_TYPE_KEYWORD = "keyword";
+            const TOKEN_TYPE_OPERATOR = "operator";
+            const TOKEN_TYPE_STRING = "string";
+            const TOKEN_TYPE_COMMENT = "comment";
+            const TOKEN_TYPE_LAYOUT = "layout";
+
+            const TSQL_HIGHLIGHTING_OPTIONS = Object.freeze({
+                switches: [],
+                tokenTypes: {
+                    [TOKEN_TYPE_KEYWORD]: /writetext|with|while|where|when|waitfor|view|varying|values|user|use|updatetext|update|unique|union|tsequal|truncate|trigger|transaction|tran|top|to|then|textsize|tablesample|table|system_user|statistics|some|shutdown|setuser|set|session_user|select|securityaudit|schema|save|rule|rowguidcol|rowcount|rollback|right|revoke|revert|return|restrict|restore|replication|references|reconfigure|readtext|read|raiseerror|public|procedure|proc|print|primary|precision|plan|percent|over|outer|order|option|openxml|openrowset|openquery|opendatasource|open|on|offsets|of|nullif|null|nonclustered|nocheck|national|merge|load|lineno|like|left|kill|key|join|is|into|intersect|insert|inner|index|in|if|identity_insert|identitycol|identity|holdlock|having|group|grant|goto|go|function|full|from|freetexttable|freetext|foreign|for|fillfactor|file|fetch|exit|execute|exec|except|escape|errlvl|end|else|drop|double|distributed|distinct|disk|desc|deny|delete|default|declare|deallocate|dbcc|database|cursor|current_user|current_timestamp|current_time|current_date|current|cross|create|convert|continue|containstable|contains|constraint|compute|commit|column|collate|coalesce|clustered|close|checkpoint|check|case|cascade|by|bulk|browse|break|between|begin|backup|authorize|asc|as|alter|all|add|absolute/i,
+                    [TOKEN_TYPE_BRACKET]: /\(|\)/i,
+                    [TOKEN_TYPE_OPERATOR]: /and|or|exists|not|like|between|in|is|null|and=|or=|exists=|not=|like=|between=|in=|is=|null=/i,
+                    [TOKEN_TYPE_IDENTIFIER]: /[a-zA-Z][a-zA-Z0-9_]*/i,
+                    [TOKEN_TYPE_STRING]: /'[^']*'|"[^"]*"/,
+                    [TOKEN_TYPE_COMMENT]: /--.*$|\/\*[\s\S]*?\*\//m,
+                    [TOKEN_TYPE_LAYOUT]: /\s+/,
+                },
+            });
+
+            const JINJA_HIGHLIGHTING_OPTIONS = Object.freeze({
+                switches: [
+                    {
+                        start: /\{\{/,
+                        end: /\}\}/
+                    },
+                    {
+                        start: /\{%[+-]?/,
+                        end: /[+-]?%\}/,
+                    },
+                ],
+                tokenTypes: {
+                    [TOKEN_TYPE_KEYWORD]: /else|endfor|endif|endmacro|for|if|in|macro/,
+                    [TOKEN_TYPE_BRACKET]: /\(|\)/i,
+                    [TOKEN_TYPE_OPERATOR]: /\||==|names|selectattr/,
+                    [TOKEN_TYPE_IDENTIFIER]: /[a-zA-Z][a-zA-Z0-9_]*/i,
+                    [TOKEN_TYPE_STRING]: /'[^']*'/,
+                    [TOKEN_TYPE_LAYOUT]: /\s+/,
+                },
+            });
+
+            const JINJA_COMMENTS_HIGHLIGHTING_OPTIONS = Object.freeze({
+                switches: [
+                    {
+                        start: /\{#[+-]?/,
+                        end: /[+-]?#\}/
+                    },
+                ],                
+                tokenTypes: {
+                    [TOKEN_TYPE_COMMENT]: /([^#+-]|[+-]?#[^}])*/,
+                },
+            });
+
+            const PYTHON_HIGHLIGHTING_OPTIONS = Object.freeze({
+                tokenTypes: {
+                    [TOKEN_TYPE_KEYWORD]: /and|as|assert|async|await|break|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield/,
+                    [TOKEN_TYPE_BRACKET]: /[(){}[\]]/i,
+                    [TOKEN_TYPE_OPERATOR]: /\+|-|\*|\/|%|\*\*|\/\/|=|\+=|-=|\*=|\/=|%=|\/\/=|\*\*=|&=|\|=|\^=|>>=|<<=|==|!=|>|<|>=|<=|and|or|not|is|is not|in|not in|&|\||\^|~|<<|>>/i,
+                    [TOKEN_TYPE_IDENTIFIER]: /[a-zA-Z][a-zA-Z0-9_]*/i,
+                    [TOKEN_TYPE_STRING]: /[rfb]?('[^']*'|"[^"]*"|'''[^']*'''|"""[^"]*""")/,
+                    [TOKEN_TYPE_COMMENT]: /#.*/,
+                    [TOKEN_TYPE_LAYOUT]: /\s+/,
+                },
+            })
+
+            const MODES = Object.freeze({
+                python: PYTHON_HIGHLIGHTING_OPTIONS,
+                tsql: TSQL_HIGHLIGHTING_OPTIONS,
+                jinja: JINJA_HIGHLIGHTING_OPTIONS,
+                jinja_comments: JINJA_COMMENTS_HIGHLIGHTING_OPTIONS,
+            });
+
+            const INITIAL_MODE = "tsql";
+
+            document.addEventListener("DOMContentLoaded", () => {
+                const container = document.getElementById("container");
+
+                const input = document.createElement("textarea");
+                input.id = "input";
+                const command = document.createElement("div")
+                command.id = "command";
+                const output = document.createElement("div");
+                output.id = "output";
+
+                container.appendChild(input);
+                container.appendChild(command);
+                container.appendChild(output);
+
+                initInput();
+                initCommand();
+                doHighlighting();
+                doHighlighting2();
+
+                function initInput() {
+                    input.value = `
+{% for value in sequence %} ... {% endfor %}
+
+{{ expression }}
+
+{# expression #}
+
+{# Loop through the list of names and output a greeting. #}
+{% for name in ['World', 'Maarten', 'Reader'] %}
+Hello {{ name }}!
+{% endfor %}
+
+{# Define funcionality to quote and join lists of names #}
+{% macro q(names) -%}
+[{{ names|join('].[') }}]
+{%- endmacro %}
+
+{# Define a macro to put commas ',' before items in a loop,
+   except before the first item #}
+{% macro c(loop) -%}
+{{ '  ' if loop.index == 0 else ', ' }}
+{%- endmacro %}
+
+{# Loop trough all schemas and create SQL DML statements -#}
+{% for schema in schemas %}
+CREATE SCHEMA {{ q([schema.name]) }};
+GO
+
+{# Loop trough all tables in the schema and create a CREATE TABLE statement -#}
+{% for table in schema.tables %}
+CREATE TABLE {{ q([schema.name, table.name]) }} (
+{% for column in table.columns -%}
+{{ c(loop) }}{{ q([column.name]) }} {{ column.fulltype }}
+{% endfor -%}
+, CONSTRAINT {{ q([table.primary_key_constraint.name]) }}
+    PRIMARY KEY ({{ q(table.primary_key_constraint.column_names) }})
+);
+GO
+{% endfor -%}
+ 
+{# Loop tables in the schema and create foreign keys constraints -#}
+{% for table in schema.tables|selectattr('foreign_key_constraints') %}
+ALTER TABLE {{ q([schema.name, table.name]) }}
+ADD
+{% for fkey in table.foreign_key_constraints -%}
+{{ c(loop) }}CONSTRAINT {{ q([fkey.name]) }}
+    FOREIGN KEY 
+      ({{ q(fkey.column_names) }})
+    REFERENCES {{ q([fkey.foreign_schema_name, fkey.foreign_table_name]) }} 
+      ({{ q(fkey.foreign_column_names) }})
+{% endfor -%}
+;
+GO
+{% endfor %}
+ 
+{% endfor %}
+`.trim()
+
+                    input.addEventListener("change", () => { doHighlighting(); doHighlighting2() });
+                }
+
+                function initCommand() {
+                    const selectHost = document.createElement("select");
+                    selectHost.addEventListener("change", () => { doHighlighting(); doHighlighting2() })
+                    selectHost.id = SELECT_HOST_ID;
+                    const optionTSql = document.createElement("option");
+                    optionTSql.appendChild(document.createTextNode("TSQL"));
+                    optionTSql.setAttribute("value", "tsql");
+                    selectHost.appendChild(optionTSql);
+                    const optionPython = document.createElement("option");
+                    optionPython.setAttribute("value", "python");
+                    optionPython.appendChild(document.createTextNode("Python"));
+                    selectHost.appendChild(optionPython);
+                    command.appendChild(selectHost);
+
+                    const buttonHighlight = document.createElement("div");
+                    buttonHighlight.classList.add("button");
+                    buttonHighlight.appendChild(document.createTextNode("Highlight code"));
+                    buttonHighlight.addEventListener("click", () => { doHighlighting(); doHighlighting2() })
+                    command.appendChild(buttonHighlight);
+                    
+                    const buttonCopy = document.createElement("div");
+                    buttonCopy.classList.add("button");
+                    buttonCopy.appendChild(document.createTextNode("Copy code"));
+                    buttonCopy.addEventListener("click", doCopyHighlighted);
+                    command.appendChild(buttonCopy);
+                }
+
+                function doCopyHighlighted() {
+                    let range;
+                    let selection;
+
+                    if( document.body.createTextRange ) {
+
+                        range = document.body.createTextRange();
+                        range.moveToElement( output );
+                        range.select();
+
+                    } else if ( window.getSelection ) {
+
+                        selection = window.getSelection();
+
+                        range = document.createRange();
+                        range.selectNodeContents( output );
+
+                        selection.removeAllRanges();
+                        selection.addRange( range );
+
+                    }
+
+                    document.execCommand( 'copy' );
+                    window.getSelection().removeAllRanges();
+                }
+
+                function doHighlighting() {
+                    output.dataset.mixedmode = false;
+                    let code = input.value;
+
+                    const ol = document.createElement("ol");
+
+                    // stack of modes to keep track of nested modes in code.
+                    let modeStack = [document.getElementById(SELECT_HOST_ID).value];
+                    // Current line to which highlighted elements are added.
+                    let li = document.createElement("li");
+                    ol.appendChild(li);
+
+                    let currentTokenSpan = null;
+
+                    while (code) {
+                        // Step 1. Try tokenization.
+                        let currentMode = modeStack.at(-1);
+                        let currentModeOptions = MODES[currentMode];
+                        currentTokenSpan = findToken(code, currentModeOptions.tokenTypes, currentMode)
+
+                        // Step 2. Check for mode switch.
+                        if (!currentTokenSpan) {
+                            for (const [mode, modeOptions] of Object.entries(MODES)) {
+                                for (const modeSwitch of modeOptions.switches || []) {
+                                    currentTokenSpan = findToken(code, {switch: modeSwitch.start}, mode)
+
+                                    if (currentTokenSpan) break;
+                                }
+
+                                if (currentTokenSpan) break;
+                            }
+
+                            if (currentTokenSpan) {
+                                output.dataset.mixedmode = true;
+                                modeStack.push(currentTokenSpan.dataset.mode);
+                            }
+                        }
+
+                        // Step 3. Check for mode switch back.
+                        if (!currentTokenSpan) {
+                            for (const modeSwitch of currentModeOptions.switches || []) {
+                                currentTokenSpan = findToken(code, {switch: modeSwitch.end}, currentMode)
+
+                                if (currentTokenSpan) break;
+                            }
+
+                            if (currentTokenSpan) {
+                                modeStack.pop()
+                            }
+                        }
+
+                        // Step 4. Ignore and just add a single character.
+                        // Tokenizing starts again right after that character.
+                        if (!currentTokenSpan) {
+                            currentTokenSpan = document.createElement("span");
+                            currentTokenSpan.dataset.mode = currentMode;
+                            currentTokenSpan.appendChild(document.createTextNode(code[0]));
+                        }
+
+                        const allLines = currentTokenSpan.textContent
+                        const lines = allLines.split("\n")
+                        code = code.substr(allLines.length);
+
+                        if (lines.length === 1) {
+                            li.appendChild(currentTokenSpan)
+                        } else {
+                            for (const lineIndex in lines) {
+                                const line = lines[lineIndex];
+                                const newSpan = currentTokenSpan.cloneNode();
+
+                                if (line) {
+                                    newSpan.textContent = line;
+                                    li.appendChild(newSpan); 
+                                }
+                                
+                                if (lineIndex < lines.length - 1) {
+                                    li = document.createElement("li");
+                                    ol.appendChild(li)
+                                }
+                            }
+                        }
+                    }
+                    
+
+                    output.textContent = "";
+                    output.append(ol);
+                }
+
+                function doHighlighting2() {
+                    const code = input.value;
+
+                    // 1. Determine template parts.
+                    let templateParts = []
+
+                    // 1.1 Get all template parts
+                    for (const [mode, modeOptions] of Object.entries(MODES)) {
+                        for (const s of modeOptions.switches || []) {
+                            const pattern = `(?<left>${s.start.source})(?<middle>.*?)(?<right>${s.end.source})`;
+                            const regexp = RegExp(pattern, "g");  
+
+                            let result = regexp.exec(code);
+
+                            while(result) {
+                                templateParts.push({
+                                    mode,
+                                    start: result.index,
+                                    length: result[0].length,
+                                    literal: result[0],
+                                    left: result.groups.left,
+                                    middle: result.groups.middle,
+                                    right: result.groups.right,
+                                    
+                                })
+                                result = regexp.exec(code);
+                            }
+                        }
+                    }
+
+                    templateParts.sort((a, b) => a.start - b.start);
+
+                    // 1.2 Add all host parts
+                    let prevIndex = 0;
+                    let partIndex = 0;
+                    while (partIndex < templateParts.length) {
+                        const part = templateParts[partIndex];
+                        templateParts.splice(partIndex, 0, {
+                            mode: document.getElementById(SELECT_HOST_ID).value,
+                            start: prevIndex,
+                            length: part.start - prevIndex,
+                            literal: code.substring(prevIndex, part.start),
+                            left: "",
+                            middle: code.substring(prevIndex, part.start),
+                            right: "",
+                        });
+                        prevIndex = part.start + part.length;
+                        partIndex += 2;
+                    }
+
+                    templateParts = templateParts.filter((p) => p.length > 0);
+                    
+                    // 2. Tokenize parts.
+                    const tokens = [];
+                    for (const part of templateParts) {
+                        let currentMode = part.mode;
+                        let currentModeOptions = MODES[currentMode];
+                        
+                        for (const [tokenType, tokenPattern] of Object.entries(currentModeOptions.tokenTypes)) {
+                            const pattern = RegExp(tokenPattern.source, "g");
+                            const matches = [...part.middle.matchAll(pattern)];
+                            tokens.push(...matches)
+                        }
+                    }
+                }
+
+                function findToken(code, tokenTypes, mode) {
+                    let longestMatch = 0;
+                    let longestMatchTokenType = null;
+
+                    for (const [tokenType, tokenPattern] of Object.entries(tokenTypes)) {
+                        const match = matchesAtStart(code, tokenPattern);
+
+                        if (match && match.length > longestMatch) {
+                            longestMatch = match.length;
+                            longestMatchTokenType = tokenType;
+                        }
+                    }
+                    
+                    if (longestMatchTokenType) {
+                        const span = document.createElement("span");
+                        span.dataset.tokentype = longestMatchTokenType;
+                        span.dataset.mode = mode;
+                        span.appendChild(document.createTextNode(code.substr(0, longestMatch)))
+                        return span;
+                    } else {
+                        return null;
+                    }
+                }
+
+                function matchesAtStart(code, regex) {
+                    const match = regex.exec(code);
+
+                    if (match && match.index === 0) {
+                        return match[0]
+                    } else {
+                        return null
+                    }
+                }
+            })
+        </script>
+    </head>
+
+    <body>
+        <div id="container"></div>
+    </body>
+</html>

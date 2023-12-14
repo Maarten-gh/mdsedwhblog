@@ -1,5 +1,5 @@
-::: mermaid
-graph LR
+```mermaid
+graph RL
 
 {%- for schema_mapping in schema_mappings %}
 subgraph {{schema_mapping.source_schema.name}} [{{schema_mapping.source_schema.name}}]
@@ -7,7 +7,7 @@ subgraph {{schema_mapping.source_schema.name}} [{{schema_mapping.source_schema.n
 {% for table_mapping in schema_mapping.table_mappings -%}
 subgraph {{schema_mapping.source_schema.name}}.{{table_mapping.source_table.name}} [{{table_mapping.source_table.name}}]
 
-  {% for column_mapping in table_mapping.column_mappings -%}
+  {% for column_mapping in table_mapping.load_strategies[0].steps[0].column_mappings -%}
   {% if column_mapping.source_column -%} {{schema_mapping.source_schema.name}}.{{table_mapping.source_table.name}}.{{column_mapping.source_column.name}}({{column_mapping.source_column.name}}) {%- endif %}
   {% endfor %}
 
@@ -21,7 +21,7 @@ subgraph  {{schema_mapping.target_schema.name}} [{{schema_mapping.target_schema.
 {% for table_mapping in schema_mapping.table_mappings -%}
 subgraph {{schema_mapping.target_schema.name}}.{{table_mapping.target_table.name}} [{{table_mapping.target_table.name}}]
 
-  {% for column_mapping in table_mapping.column_mappings -%}
+  {% for column_mapping in table_mapping.load_strategies[0].steps[0].column_mappings -%}
   {{schema_mapping.target_schema.name}}.{{table_mapping.target_table.name}}.{{column_mapping.target_column.name}}({{column_mapping.target_column.name}})
   {% endfor %}
 
@@ -31,11 +31,10 @@ end
 end
 
 {% for table_mapping in schema_mapping.table_mappings -%}
-{% for column_mapping in table_mapping.column_mappings -%}
+{% for column_mapping in table_mapping.load_strategies[0].steps[0].column_mappings -%}
 {% if column_mapping.source_column -%} {{schema_mapping.target_schema.name}}.{{table_mapping.target_table.name}}.{{column_mapping.target_column.name}}-->{{schema_mapping.source_schema.name}}.{{table_mapping.source_table.name}}.{{column_mapping.source_column.name}}({{column_mapping.source_column.name}}) {%- endif %}
 {% endfor %}
 {% endfor -%}
 
 {%- endfor -%}
-
-:::
+```

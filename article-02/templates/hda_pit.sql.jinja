@@ -1,0 +1,43 @@
+{% from 'util.sql.jinja' import q, c with context %}
+
+{# Loop trough all schemas and create SQL PIT functions -#}
+{% for schema in schemas %}
+
+{# Loop trough all tables and create SQL PIT functions -#}
+{% for table in schema.tables %}
+-- Create PIT function for {{ q([schema.name, table.name]) }}
+CREATE OR ALTER FUNCTION {{ q([schema.name, "ufn_pit_" + table.name]) }} (
+  @timestamp_utc datetime2
+)
+RETURNS TABLE
+AS
+RETURN (
+  SELECT
+  {% for column in table.columns -%}
+  {{ c(loop) }}{{ q([column.name]) }}
+  {% endfor -%}
+  FROM
+    {{ q([schema.name, table.name]) }} AS [d]
+  WHERE
+    [d].[hda_validFrom_utc] <= @timestamp_utc
+  AND
+    [d].[hda_voided] = 0
+  AND
+    [hda_validFrom_utc] = (
+      SELECT 
+        MAX([hda_validFrom_utc])
+      FROM 
+        {{ q([schema.name, table.name]) }} AS [h]
+      WHERE
+      {% for column_name in table.primary_key_constraint.column_names if column_name != "hda_validFrom_utc" -%}
+      {{ c(loop) }}{{ q(["d", column_name]) }} = {{ q(["h", column_name]) }}
+      {% endfor -%}
+      AND
+        [h].[hda_validFrom_utc] <= @timestamp_utc  
+    )
+)
+;
+GO
+{% endfor %}
+
+{% endfor %}

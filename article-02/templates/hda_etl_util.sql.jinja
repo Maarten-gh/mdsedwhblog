@@ -1,0 +1,66 @@
+{% from 'util.sql.jinja' import c, q with context %}
+
+
+{# Return the value for a column from a column mapping #}
+{% macro colval(mapping) -%}
+{{ mapping.expression if mapping.expression else q([mapping.source_column.name]) }}
+{%- endmacro %}
+
+
+{# Returns the target column given a source column #}
+{% macro get_target_column_name(source_column_name, column_mappings) -%}
+{{ column_mappings | selectattr('source_column.name', '==', source_column_name) | map(attribute='target_column.name') | list | first }}
+{%- endmacro %}
+
+
+{# Return a formatted list of column names #}
+{% macro hda_column_name_list(column_names) -%}
+  {% for name in column_names.column_mappings | map(attribute='target_column.name') -%}
+  {{ c(loop) }}{{ q([name]) }}
+  {% endfor -%}
+{%- endmacro %}
+
+
+{# Return a formatted list of column values #}
+{% macro hda_column_value_list(step) -%}
+  {% for column_mapping in step.column_mappings -%}
+  {{ c(loop) }}{{ colval(column_mapping) }}
+  {% endfor -%}
+{%- endmacro %}
+
+
+{# Return an expression that compares a source column to a target column #}
+{% macro compare_source_column_to_target_column(column_name, step) -%}
+{{ q(["src", column_name]) }} = {{ q(["hda", get_target_column_name(column_name, step.column_mappings)]) }}
+{%- endmacro %}
+
+
+{# Return an expression that compares a source column to a target considdering NULL values #}
+{% macro null_safe_compare_source_column_to_target_column(column_name, step) -%}
+({{ q(["src", column_name]) }} = {{ q(["hda", get_target_column_name(column_name, step.column_mappings)]) }}
+       OR ({{ q(["src", column_name]) }} IS NULL AND {{ q(["hda", get_target_column_name(column_name, step.column_mappings)]) }} IS NULL))
+{%- endmacro %}
+
+
+{# Return the name of the stored procedure to load HDA tables #}
+{% macro get_usp_load_name(schema_mapping, table_mapping) -%}
+{{ q([schema_mapping.target_schema.name, "usp_load_" + table_mapping.target_table.name]) }}
+{%- endmacro %}
+
+
+{# Return the name of PIT function for HDA tables #}
+{% macro get_ufn_pit_name(schema_mapping, table_mapping) -%}
+{{ q([schema_mapping.target_schema.name, "ufn_pit_" + table_mapping.source_table.name]) }}
+{%- endmacro %}
+
+
+{# Return the name of the source table #}
+{% macro get_source_table_name(schema_mapping, table_mapping) -%}
+{{ q([schema_mapping.source_schema.name, table_mapping.source_table.name]) }}
+{%- endmacro %}
+
+
+{# Return the name of the HDA table #}
+{% macro get_hda_table_name(schema_mapping, table_mapping) -%}
+{{ q([schema_mapping.target_schema.name, table_mapping.target_table.name]) }}
+{%- endmacro %}
