@@ -21,12 +21,12 @@ CREATE OR ALTER PROCEDURE {{ get_usp_load_name(schema_mapping, table_mapping) }}
 )
 AS
 BEGIN
-  -- {{ table_mapping.load_strategies[0].steps[0].description }}.
+  -- {{ table_mapping.load_steps[0].description }}.
   INSERT INTO {{ get_hda_table_name(schema_mapping, table_mapping) }} (
-  {{ hda_column_name_list(table_mapping.load_strategies[0].steps[0]) -}}
+  {{ hda_column_name_list(table_mapping.load_steps[0]) -}}
   )
   SELECT
-  {{ hda_column_value_list(table_mapping.load_strategies[0].steps[0]) -}}
+  {{ hda_column_value_list(table_mapping.load_steps[0]) -}}
   FROM 
     {{ get_source_table_name(schema_mapping, table_mapping) }} AS [src]
   WHERE NOT EXISTS (
@@ -38,22 +38,22 @@ BEGIN
       1=1
     {% for column_name in table_mapping.source_table.primary_key_constraint.column_names -%}
     AND
-      {{ compare_source_column_to_target_column(column_name, table_mapping.load_strategies[0].steps[0]) }}      
+      {{ compare_source_column_to_target_column(column_name, table_mapping.load_steps[0]) }}      
     {% endfor -%}
     {% for column in table_mapping.source_table.columns 
            if column.name not in table_mapping.source_table.primary_key_constraint.column_names -%}
     AND 
-      {{ null_safe_compare_source_column_to_target_column(column.name, table_mapping.load_strategies[0].steps[0]) }} 
+      {{ null_safe_compare_source_column_to_target_column(column.name, table_mapping.load_steps[0]) }} 
     {% endfor %}
   )
   ;
 
-  -- {{ table_mapping.load_strategies[0].steps[1].description }}.
+  -- {{ table_mapping.load_steps[1].description }}.
   INSERT INTO {{ get_hda_table_name(schema_mapping, table_mapping) }} (
-  {{ hda_column_name_list(table_mapping.load_strategies[0].steps[1]) -}}
+  {{ hda_column_name_list(table_mapping.load_steps[1]) -}}
   )
   SELECT
-  {{ hda_column_value_list(table_mapping.load_strategies[0].steps[1]) -}}
+  {{ hda_column_value_list(table_mapping.load_steps[1]) -}}
   FROM 
     {{ get_ufn_pit_name(schema_mapping, table_mapping) }}(@timestamp_utc) AS [hda]
   WHERE NOT EXISTS (
@@ -65,7 +65,7 @@ BEGIN
       1=1
     {% for column_name in table_mapping.source_table.primary_key_constraint.column_names -%}
     AND
-      {{ compare_source_column_to_target_column(column_name, table_mapping.load_strategies[0].steps[1]) -}}      
+      {{ compare_source_column_to_target_column(column_name, table_mapping.load_steps[1]) -}}      
     {% endfor %}
   )
   ;

@@ -11,23 +11,16 @@ class ColumnMapping:
     
 
 @dataclass
-class TableLoadStrategyStep:
+class TableLoadStep:
     description: str
     column_mappings: list[ColumnMapping] = field(default_factory=list)
-
-
-@dataclass
-class TableLoadStrategy:
-    name: str
-    steps: list[TableLoadStrategyStep] = field(default_factory=list)
-
 
 @dataclass
 class TableMapping:
     source_table: Table
     target_table: Table
 
-    load_strategies: list[TableLoadStrategy] = field(default_factory=list)
+    load_steps: list[TableLoadStep] = field(default_factory=list)
 
 
 @dataclass

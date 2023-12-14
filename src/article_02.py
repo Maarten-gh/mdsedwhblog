@@ -12,8 +12,7 @@ from domain.physical_mapping_domain import (
     ColumnMapping,
     PhysicalModelMapping,
     SchemaMapping,
-    TableLoadStrategy,
-    TableLoadStrategyStep,
+    TableLoadStep,
     TableMapping,
 )
 
@@ -52,74 +51,62 @@ def transform_source_schema_tho_hda_schema_mapping(
 def transfrom_source_table_to_hda_table_mapping(
         source_table: Table
 ) -> TableMapping:
-    hda_full_load_strategy = \
-        transform_source_table_into_hda_full_load_strategy(source_table)
-    hda_table = Table(
-        name=source_table.name,
-        primary_key_constraint=create_hda_primary_key_constraint(
-            source_table.primary_key_constraint),
-        columns=[m.target_column for m in hda_full_load_strategy.steps[0].column_mappings],
-        foreign_key_constraints=[],
-    )
-    mapping = TableMapping(
-        source_table=source_table,
-        target_table=hda_table,
-        load_strategies=[hda_full_load_strategy],
-    )
-    return mapping
-
-
-def transform_source_table_into_hda_full_load_strategy(
-        source_table: Table
-) -> TableLoadStrategy:
-    source_column_mappings = \
+    column_mappings = \
         [transform_source_column_to_hda_column_mapping(
             c, source_table.primary_key_constraint.column_names
             ) for c in source_table.columns
         ]
     insert_changes_step = \
-        transfrom_source_table_to_hda_full_load_strategy_step_insert_changes(
-            source_column_mappings)
+        transfrom_source_table_to_hda_step_insert_changes(
+            column_mappings)
     insert_deletes_step = \
-        transfrom_source_table_to_hda_full_load_strategy_step_insert_deletes(
-            source_column_mappings,
+        transfrom_source_table_to_hda_step_insert_deletes(
+            column_mappings,
             source_table.primary_key_constraint)
-
-    return TableLoadStrategy(
-        name="HDA Full Load",
-        steps=[
+    hda_table = Table(
+        name=source_table.name,
+        primary_key_constraint=create_hda_primary_key_constraint(
+            source_table.primary_key_constraint),
+        columns=[m.target_column for m in insert_changes_step.column_mappings],
+        foreign_key_constraints=[],
+    )
+    mapping = TableMapping(
+        source_table=source_table,
+        target_table=hda_table,
+        load_steps=[
             insert_changes_step,
-            insert_deletes_step,
+            insert_deletes_step
         ],
     )
+    return mapping
 
 
-def transfrom_source_table_to_hda_full_load_strategy_step_insert_changes(
+def transfrom_source_table_to_hda_step_insert_changes(
     column_mappings: list[ColumnMapping]
-) -> TableLoadStrategyStep:
+) -> TableLoadStep:
     technical_hda_column_mappings = \
         create_technical_hda_column_mappings("0")
     hda_column_mappings = \
         technical_hda_column_mappings + \
         column_mappings
     
-    return TableLoadStrategyStep(
+    return TableLoadStep(
         description="Load HDA table with changes from source table",
         column_mappings=hda_column_mappings
     )
 
 
-def transfrom_source_table_to_hda_full_load_strategy_step_insert_deletes(
+def transfrom_source_table_to_hda_step_insert_deletes(
     column_mappings: list[ColumnMapping],
     source_primary_key: PrimaryKeyConstraint
-) -> TableLoadStrategyStep:
+) -> TableLoadStep:
     technical_hda_column_mappings = \
         create_technical_hda_column_mappings("1")
     hda_column_mappings = \
         technical_hda_column_mappings + \
         [m for m in column_mappings if m.source_column.name in source_primary_key.column_names]
     
-    return TableLoadStrategyStep(
+    return TableLoadStep(
         description="Add records to the HDA table for deleted source records",
         column_mappings=hda_column_mappings,
     )
