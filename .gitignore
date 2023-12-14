@@ -1,5 +1,1 @@
-Pipfile.lock
-article-01/.ipynb_checkpoints/
-article-01/__pycache__/
-src/__pycache__/article_utils.cpython-310.pyc
-src/domain/__pycache__/physical_mapping_domain.cpython-310.pyc
+*.pyc
