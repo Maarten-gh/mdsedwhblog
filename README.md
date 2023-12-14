@@ -14,8 +14,6 @@ The articles are written as Jupyter notebooks, as this enables executable code e
 
 ## Articles
 
-Note: syntax highlighting in the articles is done using https://syntax-highlighter.k26.ch/.
-
 1. **Model Driven Software Engineering for Data Warehousing — Part 1: Code Generation** (article-01)
 
    This article is the first part of a series of articles in which I want to give an overview of how I think Model Driven Software Engineering (MDSE) can be used for data warehousing. 
@@ -23,9 +21,8 @@ Note: syntax highlighting in the articles is done using https://syntax-highlight
    Last but not least the topics described in this article are explained using an example.
    The code for this article is found in _src/article-01.py_.
 
-1. **Model Driven Software Engineering for Data Warehousing — Part 2: Data warehousing** (article-01)
+1. **Model Driven Software Engineering for Data Warehousing — Part 2: Data warehousing** (article-02)
 
-   This article is the first part of a series of articles in which I want to give an overview of how I think Model Driven Software Engineering (MDSE) can be used for data warehousing. 
-   This article is about the concepts of model driven software engineering and why you should use it while developing your Data Warehouse (DWH).
-   Last but not least the topics described in this article are explained using an example.
-   The code for this article is found in _src/article-01.py_.
+   This article is the second part of a series of articles in which I want to give an overview of how I think Model Driven Software Engineering (MDSE) can be used for data warehousing. 
+   This article is all about applying the concepts of the first article in a more complex setting.
+   The code for this article is found in _src/article-02.py_.
